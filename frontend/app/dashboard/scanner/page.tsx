@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Router, Wifi, Clock, Terminal, RefreshCw, Radar as RadarPing } from "lucide-react";
+import { Router, Wifi, Clock, Terminal, RefreshCw, Radar as RadarPing, MonitorCheck } from "lucide-react";
 import { apiGet } from "@/lib/api";
 
 interface Device {
@@ -157,6 +157,21 @@ export default function ScannerPage() {
           ) : (
             <p className="text-sm text-muted-foreground">No scans recorded yet.</p>
           )}
+        </div>
+      </div>
+
+      <div className="mt-4 glass rounded-2xl border border-teal/20 bg-teal/[0.04] p-4">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-teal/25 bg-teal/10">
+            <MonitorCheck className="h-4 w-4 text-teal" strokeWidth={2} />
+          </span>
+          <div>
+            <p className="text-sm font-medium tracking-tight">Live scanning requires a Windows machine</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Browsers can&apos;t access Wi-Fi hardware directly on any operating system — that&apos;s a security restriction, not a WiFiLens limitation. To run a live scan, install and run the scanner agent on a Windows PC on your network, then click{" "}
+              <span className="font-medium text-foreground">Run Scan Now</span> below. You can still browse all past scans, analytics, and history from any device.
+            </p>
+          </div>
         </div>
       </div>
 
