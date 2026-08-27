@@ -7,14 +7,17 @@ import httpx
 
 from windows_scanner import get_raw_scan_output, parse_networks
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://wifilens-backend.onrender.com"
 CONFIG_FILE = "device_config.json"
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://wifilens.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
