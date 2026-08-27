@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -18,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/v1/auth/register", {
+      const response = await fetch(`${API_BASE}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -150,7 +152,7 @@ export default function RegisterPage() {
               disabled={loading}
               className="btn-glow w-full py-3 rounded-lg text-sm font-semibold mt-2 disabled:opacity-60"
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? "Creating account…" : "Create account"}
             </motion.button>
 
             <p className="text-center text-xs mt-1" style={{ color: "var(--color-text-dim)" }}>
