@@ -10,9 +10,11 @@ CONFIG_FILE = "device_config.json"
 
 def load_device_key() -> str:
     if not os.path.exists(CONFIG_FILE):
-        print("No device registered yet.")
-        print("Run 'python register_device.py' first, then try again.")
-        sys.exit(1)
+        if __name__ == "__main__":
+            print("No device registered yet.")
+            print("Run 'python register_device.py' first, then try again.")
+            sys.exit(1)
+        raise FileNotFoundError("Device not registered")
 
     with open(CONFIG_FILE) as f:
         config = json.load(f)

@@ -93,9 +93,14 @@ def parse_networks(raw_output: str) -> list[dict]:
             networks[-1].pop("_band", None)
             continue
 
-    return networks
-
-
+    seen = set()
+    deduped = []
+    for net in networks:
+        key = net.get("bssid")
+        if key not in seen:
+            seen.add(key)
+            deduped.append(net)
+    return deduped
 if __name__ == "__main__":
     raw = get_raw_scan_output()
     parsed = parse_networks(raw)

@@ -15,7 +15,8 @@ interface ScanDetail extends ScanSummary {
 }
 
 function formatDate(iso: string) {
-  const d = new Date(iso);
+  const normalized = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+  const d = new Date(normalized);
   return d.toLocaleString(undefined, {
     day: "numeric",
     month: "short",

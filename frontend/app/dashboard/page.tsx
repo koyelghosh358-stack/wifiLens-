@@ -2,15 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { Radar } from "lucide-react";
-import { apiGet, Analytics, NetworkObservation } from "@/lib/api";
+import { apiGet, NetworkObservation } from "@/lib/api";
 import { StatCards } from "@/components/wifilens/stat-cards";
 import { SignalMap } from "@/components/wifilens/signal-map";
 import { ActivityFeed } from "@/components/wifilens/activity-feed";
 import { MetricRings } from "@/components/wifilens/metric-rings";
 
+interface ScanSummary {
+  id: string;
+  created_at: string;
+  network_count: number;
+}
+
 export default function DashboardPage() {
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [networks, setNetworks] = useState<NetworkObservation[]>([]);
+  const [totalScans, setTotalScans] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -22,9 +28,15 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const [a, n] = await Promise.all([apiGet("/api/v1/analytics"), apiGet("/api/v1/networks")]);
-      setAnalytics(a);
-      setNetworks(n);
+      const scans: ScanSummary[] = await apiGet("/api/v1/scans");
+      setTotalScans(scans.length);
+
+      if (scans.length > 0) {
+        const latest = await apiGet(`/api/v1/scans/${scans[0].id}`);
+        setNetworks(latest.observations || []);
+      } else {
+        setNetworks([]);
+      }
     } catch {
       setError("Couldn't load data. Make sure the backend is running.");
     } finally {
@@ -35,16 +47,15 @@ export default function DashboardPage() {
   const strongest = networks.length > 0 ? [...networks].sort((a, b) => b.rssi - a.rssi)[0] : null;
   const spark = [7, 9, 8, 11, 10, 12, 11, networks.length || 1];
 
-  const excellentPercent = analytics && analytics.total_observations > 0
-    ? Math.round(((analytics.excellent_count + analytics.good_count) / analytics.total_observations) * 100)
-    : 0;
+  const excellentCount = networks.filter((n) => n.signal_quality === "Excellent" || n.signal_quality === "Good").length;
+  const excellentPercent = networks.length > 0 ? Math.round((excellentCount / networks.length) * 100) : 0;
 
-  const openPercent = analytics && analytics.total_observations > 0
-    ? Math.round((analytics.open_networks / analytics.total_observations) * 100)
-    : 0;
+  const openCount = networks.filter((n) => n.security_type === "Open").length;
+  const openPercent = networks.length > 0 ? Math.round((openCount / networks.length) * 100) : 0;
+  const securedCount = networks.length - openCount;
 
-  const band24 = analytics?.band_distribution?.["2.4GHz"] ?? 0;
-  const band5 = analytics?.band_distribution?.["5GHz"] ?? 0;
+  const band24 = networks.filter((n) => n.band === "2.4GHz").length;
+  const band5 = networks.filter((n) => n.band === "5GHz").length;
   const bandSplit = `${band24}/${band5}`;
 
   return (
@@ -70,11 +81,11 @@ export default function DashboardPage() {
       )}
 
       <StatCards
-        networksDetected={analytics?.unique_networks ?? 0}
+        networksDetected={networks.length}
         spark={spark}
         strongestSignal={strongest?.rssi ?? null}
-        securedNetworks={analytics?.secured_networks ?? 0}
-        totalScans={analytics?.total_scans ?? 0}
+        securedNetworks={securedCount}
+        totalScans={totalScans}
       />
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">

@@ -9,6 +9,7 @@ export async function apiGet(path: string) {
   const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
   });
   if (res.status === 401) {
     localStorage.removeItem("wifilens_token");

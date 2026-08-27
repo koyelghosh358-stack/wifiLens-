@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Router, Wifi, Clock, Terminal, RefreshCw } from "lucide-react";
+import { Router, Wifi, Clock, Terminal, RefreshCw, Radar as RadarPing } from "lucide-react";
 import { apiGet } from "@/lib/api";
 
 interface Device {
@@ -21,7 +21,8 @@ interface ScanSummary {
 
 function timeAgo(iso: string | null) {
   if (!iso) return "Never";
-  const diffMs = Date.now() - new Date(iso).getTime();
+  const normalized = iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z";
+  const diffMs = Date.now() - new Date(normalized).getTime();
   const mins = Math.floor(diffMs / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
@@ -37,6 +38,10 @@ export default function ScannerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState("");
+  const [scanError, setScanError] = useState("");
+
   useEffect(() => {
     loadData();
   }, []);
@@ -44,6 +49,7 @@ export default function ScannerPage() {
   async function loadData() {
     setLoading(true);
     setError("");
+    const start = Date.now();
     try {
       const [d, s] = await Promise.all([apiGet("/api/v1/devices"), apiGet("/api/v1/scans")]);
       setDevices(d);
@@ -51,7 +57,38 @@ export default function ScannerPage() {
     } catch {
       setError("Couldn't load data. Make sure the backend is running.");
     } finally {
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) await new Promise((r) => setTimeout(r, 500 - elapsed));
       setLoading(false);
+    }
+  }
+
+  async function handleScan() {
+    setScanning(true);
+    setScanResult("");
+    setScanError("");
+    try {
+            const token = localStorage.getItem("wifilens_token");
+      const res = await fetch("http://127.0.0.1:8765/scan", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Scan failed");
+      }
+      const data = await res.json();
+      setScanResult(`Scan complete — ${data.network_count} network(s) found.`);
+      await new Promise((r) => setTimeout(r, 500));
+      await loadData();
+    } catch (err) {
+      setScanError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't reach the local scanner agent. Is agent_server.py running?"
+      );
+    } finally {
+      setScanning(false);
     }
   }
 
@@ -128,13 +165,25 @@ export default function ScannerPage() {
           <Terminal className="h-4 w-4 text-teal" strokeWidth={2} />
           <h2 className="text-sm font-semibold tracking-tight">Run a New Scan</h2>
         </div>
-        <p className="mb-3 text-sm text-muted-foreground">
-          Scanning happens locally on your Windows machine. Open a terminal in the <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-xs">scanner-agent</code> folder and run:
+        <p className="mb-4 text-sm text-muted-foreground">
+          Triggers a real scan on your Windows machine via the local scanner agent.
         </p>
-        <div className="rounded-xl border border-border bg-[#080b11] px-4 py-3 font-mono text-sm text-teal">
-          python agent.py
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">Then refresh this page or the Dashboard to see the new results.</p>
+        <button
+          type="button"
+          onClick={handleScan}
+          disabled={scanning}
+          className="btn-glow inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold disabled:opacity-70"
+        >
+          <RadarPing className={`h-4 w-4 ${scanning ? "animate-spin" : ""}`} strokeWidth={2.25} />
+          {scanning ? "Scanning…" : "Run Scan Now"}
+        </button>
+        {scanResult && (
+          <p className="mt-3 text-xs text-teal">{scanResult}</p>
+        )}
+        {scanError && (
+          <p className="mt-3 text-xs text-quality-weak">{scanError}</p>
+        )}
+
       </div>
     </div>
   );

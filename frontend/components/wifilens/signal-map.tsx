@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { NetworkObservation } from "@/lib/api";
 
 const SIZE = 400;
@@ -22,6 +22,8 @@ function colorForQuality(quality: string) {
 }
 
 export function SignalMap({ networks }: { networks: NetworkObservation[] }) {
+  const [hovered, setHovered] = useState<{ net: NetworkObservation; x: number; y: number } | null>(null);
+
   const nodes = useMemo(() => {
     const count = Math.max(networks.length, 1);
     return networks.map((n, i) => {
@@ -82,14 +84,42 @@ export function SignalMap({ networks }: { networks: NetworkObservation[] }) {
             <circle cx={CENTER} cy={CENTER} r={11} fill="none" stroke="var(--teal)" strokeOpacity={0.4} />
 
             {nodes.map((nd) => (
-              <g key={`n-${nd.net.id}`} className="animate-pulse-node cursor-pointer" style={{ transformOrigin: `${nd.x}px ${nd.y}px` }}>
-                <title>{`${nd.net.ssid || "(hidden)"} — ${nd.net.rssi} dBm`}</title>
+              <g
+                key={`n-${nd.net.id}`}
+                className="animate-pulse-node cursor-pointer"
+                style={{ transformOrigin: `${nd.x}px ${nd.y}px` }}
+                onMouseEnter={() => setHovered({ net: nd.net, x: nd.x, y: nd.y })}
+                onMouseLeave={() => setHovered(null)}
+              >
                 <circle cx={nd.x} cy={nd.y} r={14} fill="transparent" />
                 <circle cx={nd.x} cy={nd.y} r={9} fill={nd.color} fillOpacity={0.16} />
                 <circle cx={nd.x} cy={nd.y} r={3.5} fill={nd.color} />
               </g>
             ))}
           </svg>
+
+          {hovered && (
+            <div
+              className="pointer-events-none absolute z-20 min-w-[160px] rounded-xl border border-border bg-[#0a0e14]/95 px-3.5 py-3 text-xs shadow-2xl backdrop-blur-md"
+              style={{
+                left: `${(hovered.x / SIZE) * 100}%`,
+                top: `${(hovered.y / SIZE) * 100}%`,
+                transform: "translate(-50%, calc(-100% - 14px))",
+              }}
+            >
+              <p className="font-semibold tracking-tight">{hovered.net.ssid || "(hidden)"}</p>
+              <div className="mt-1.5 flex items-center justify-between gap-3 text-muted-foreground">
+                <span>{hovered.net.band}</span>
+                <span>{hovered.net.security_type || "Open"}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">{hovered.net.signal_quality}</span>
+                <span className="font-mono font-semibold" style={{ color: colorForQuality(hovered.net.signal_quality) }}>
+                  {hovered.net.rssi} dBm
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="absolute left-2 top-2 hidden w-32 rounded-lg border border-border bg-[#0a0e14]/70 p-3 backdrop-blur-md sm:block">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Strongest Signal</p>
