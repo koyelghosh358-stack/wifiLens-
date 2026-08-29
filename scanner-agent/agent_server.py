@@ -24,14 +24,10 @@ app.add_middleware(
 )
 
 
-def _hash_token(user_token: str) -> str:
-    return hashlib.sha256(user_token.encode()).hexdigest()[:16]
-
-
 def get_or_create_device_key(user_token: str) -> str:
     """Reuses a saved device key for this specific user if present, otherwise
     auto-registers a new device tied to this user's current website login."""
-    user_hash = _hash_token(user_token)
+    user_hash = hashlib.sha256(user_token.encode()).hexdigest()[:16]
 
     config = {}
     if os.path.exists(CONFIG_FILE):
@@ -94,30 +90,6 @@ def trigger_scan(authorization: str = Header(None)):
     )
     response.raise_for_status()
     return response.json()
-
-
-@app.post("/forget")
-def forget_device(authorization: str = Header(None)):
-    """Removes this laptop's saved registration for whichever user is signing out,
-    so next login on this laptop requires registering again."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not logged in on the website.")
-    user_token = authorization.removeprefix("Bearer ")
-    user_hash = _hash_token(user_token)
-
-    if not os.path.exists(CONFIG_FILE):
-        return {"forgotten": False, "reason": "No devices registered on this laptop."}
-
-    with open(CONFIG_FILE) as f:
-        config = json.load(f)
-
-    if user_hash in config:
-        del config[user_hash]
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(config, f, indent=2)
-        return {"forgotten": True}
-
-    return {"forgotten": False, "reason": "This user wasn't registered on this laptop."}
 
 
 if __name__ == "__main__":
