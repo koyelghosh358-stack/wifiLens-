@@ -1,18 +1,22 @@
 import subprocess
 import time
 import re
+import sys
+
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 def get_raw_scan_output() -> str:
     """Forces Windows to do a fresh Wi-Fi scan by briefly reconnecting, then reads the results."""
-    subprocess.run(["netsh", "wlan", "disconnect"], capture_output=True, text=True)
+    subprocess.run(["netsh", "wlan", "disconnect"], capture_output=True, text=True, creationflags=NO_WINDOW)
     time.sleep(1)
-    subprocess.run(["netsh", "wlan", "connect", "name=Koyel"], capture_output=True, text=True)
+    subprocess.run(["netsh", "wlan", "connect", "name=Koyel"], capture_output=True, text=True, creationflags=NO_WINDOW)
     time.sleep(2)
     result = subprocess.run(
         ["netsh", "wlan", "show", "networks", "mode=bssid"],
         capture_output=True,
         text=True,
+        creationflags=NO_WINDOW,
     )
     return result.stdout
 
@@ -101,6 +105,8 @@ def parse_networks(raw_output: str) -> list[dict]:
             seen.add(key)
             deduped.append(net)
     return deduped
+
+
 if __name__ == "__main__":
     raw = get_raw_scan_output()
     parsed = parse_networks(raw)
